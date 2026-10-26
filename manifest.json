@@ -1,0 +1,14 @@
+{
+  "name": "Plume — j'apprends à lire",
+  "short_name": "Plume",
+  "description": "Lecture, conjugaison et problèmes du CP au CM2, pour les enfants en difficulté.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F6EFE2",
+  "theme_color": "#F6EFE2",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
