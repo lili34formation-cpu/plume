@@ -190,7 +190,7 @@ function textHTML(markup, raw) {
     if (!core) return esc(tok);
     const inner = raw ? `<span class="sy s${c.n++ % 2}">${esc(core)}</span>` : sylHTML(core, c);
     return `${esc(pre)}<span class="w" data-say="${esc(plain(core, raw))}">${inner}</span>${esc(post)}`;
-  }).join(' ');
+  }).join(' ').replace(/ ([?!:;»])/g, '\u00a0$1');
 }
 function hlHTML(word, g) {
   const re = new RegExp('(' + g.slice().sort((a, b) => b.length - a.length).join('|') + ')', 'gi');
@@ -209,7 +209,12 @@ function topBar(title, back = home) {
   setTimeout(() => { const b = $('[data-back]'); if (b) b.onclick = () => { stopSpeak(); back(); }; });
   return `<div class="topbar"><button class="icon-btn" data-back aria-label="Retour">←</button><h1>${esc(title)}</h1><div class="pl">🪶 ${P() ? P().plumes : 0}</div></div>`;
 }
-function screen(html, cls = '') { stopSpeak(); app.innerHTML = `<div class="screen ${cls}">${html}</div>`; window.scrollTo(0, 0); }
+// Espace insécable avant « ? ! : ; » (typographie française) : le signe ne part jamais seul à la ligne.
+function nbsp(root) {
+  const tw = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  for (let n = tw.nextNode(); n; n = tw.nextNode()) if (/ [?!:;»]|« /.test(n.nodeValue)) n.nodeValue = n.nodeValue.replace(/ ([?!:;»])/g, '\u00a0$1').replace(/« /g, '«\u00a0');
+}
+function screen(html, cls = '') { stopSpeak(); app.innerHTML = `<div class="screen ${cls}">${html}</div>`; nbsp(app); window.scrollTo(0, 0); }
 
 // ---------- Profils ----------
 function profiles() {
@@ -392,6 +397,7 @@ function runSession(cfg) {
       },
     };
     EX[it.type]($('#ex'), it, api);
+    nbsp($('#ex'));
   };
   const finish = early => {
     const p = P();
@@ -893,6 +899,7 @@ EX.math = function (box, it, api) {
       <div class="calc rd">${a} ${op} ${b} = <span class="ans">?</span>${unit ? ` <small>${esc(unit)}</small>` : ''}</div>
       <div class="keypad">${[1, 2, 3, 4, 5, 6, 7, 8, 9, '⌫', 0, '✓'].map(k => `<button class="key ${k === '✓' ? 'okk' : ''}" data-k="${k}">${k}</button>`).join('')}</div>`;
     if (pics) phase.querySelector('.pics').insertAdjacentHTML('afterend', '<p class="note center">Tu peux compter les images.</p>');
+    setTimeout(() => phase.querySelector('.calc').scrollIntoView({ block: 'start', behavior: calm() ? 'auto' : 'smooth' }), 350);
     const ans = phase.querySelector('.ans');
     const show = () => { ans.textContent = val || '?'; };
     phase.querySelectorAll('.key').forEach(k => k.onclick = () => {
