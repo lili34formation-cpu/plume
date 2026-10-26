@@ -94,7 +94,6 @@ input { font: inherit; }
 .who span { font-size: 34px; }
 .hero { display: flex; align-items: center; gap: 12px; margin: 6px 0; }
 .owl { font-size: 86px; line-height: 1; flex: none; }
-.owl.hop { animation: hop .5s; }
 .bubble { background: var(--card); border: 2px solid var(--line); border-radius: 20px; padding: 14px 16px; font-size: 18px; line-height: 1.45; position: relative; }
 .mission { display: flex; align-items: center; gap: 16px; text-align: left; padding: 18px; border-radius: 24px; background: var(--green); color: #fff; box-shadow: 0 5px 0 #2C8152; font-size: 21px; }
 .mission:active { transform: translateY(3px); box-shadow: 0 2px 0 #2C8152; }
@@ -225,7 +224,6 @@ body.mute-on .mu { color: var(--mute); }
 /* Fin, récompenses */
 .big-emoji { font-size: 90px; line-height: 1; }
 .pop { animation: pop .6s; }
-.end-stars .stars { font-size: 48px; }
 .new-friend { background: var(--card); border: 2px solid var(--gold); border-radius: 18px; padding: 14px; display: flex; align-items: center; gap: 12px; text-align: left; }
 .new-friend span { font-size: 44px; }
 .friends { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 10px; }
@@ -300,14 +298,61 @@ body.mute-on .mu { color: var(--mute); }
 .prow .pa { font-size: 28px; }
 .prow b { flex: 1; }
 
-/* Animations (désactivées en mode calme) */
+/* Animations (comme LinguaPop ; désactivées en mode calme) */
+.screen { animation: enter .28s ease-out; }
+.owl { animation: bob 2.6s ease-in-out infinite; position: relative; }
+.owl .zzz { position: absolute; right: -6px; top: 0; font-size: 22px; animation: twinkle 2.2s infinite; }
+.owl.hop { animation: hop .5s; }
+.bubble { animation: pop .45s .15s both; }
+.mission .m-play { animation: pulse 1.8s infinite; }
+.tile span, .row .r-e { display: inline-block; transition: transform .2s; }
+.tile:active span, .row:active .r-e { transform: scale(1.25) rotate(-8deg); }
+.tile { transition: transform .12s; }
+.tile:active { transform: scale(.96); }
+.step.next { animation: pulse 1.6s infinite; }
+.step.done .stars { animation: none; }
+.sowl { font-size: 34px; display: inline-block; animation: bob 2.4s ease-in-out infinite; }
+.sowl.yay { animation: yay .6s; }
+.sowl.hmm { animation: hmm .7s; }
+.pl.bump { animation: bump .45s; }
+.ex > * { animation: rise .3s ease-out both; }
+.ex > *:nth-child(2) { animation-delay: .05s; } .ex > *:nth-child(3) { animation-delay: .1s; }
+.ex > *:nth-child(4) { animation-delay: .15s; } .ex > *:nth-child(5) { animation-delay: .2s; }
+.card.ok, .slot.filled, .cell.ok, .ans.good { animation: pop .35s; }
+.slots.ok { animation: pop .4s; }
+.big-graph { animation: pop .5s, bob 2.6s .5s ease-in-out infinite; }
+.pic span, .pb-emo { display: inline-block; animation: bob 2.4s ease-in-out infinite; }
+.play { animation: pulse 2s infinite; }
+.end-stars .st { display: inline-block; font-size: 56px; color: var(--line); animation: starIn .5s both; }
+.end-stars .st.on { color: var(--gold); text-shadow: 0 0 18px rgba(242,179,61,.6); }
+.big-emoji { animation: pop .6s, bob 2.6s .6s ease-in-out infinite; }
+.new-friend { animation: pop .5s .9s both, shine 2.5s 1.4s infinite; }
+.friend:not(.locked) span { display: inline-block; animation: bob 2.4s var(--d) ease-in-out infinite; }
+.friend.locked span { display: inline-block; animation: wiggle 2.6s var(--d) infinite; }
+.pad.lit { animation: pop .3s; }
+.confetti { position: fixed; inset: 0; pointer-events: none; z-index: 80; overflow: hidden; }
+.confetti span { position: absolute; top: -40px; font-size: 26px; animation: fall linear forwards; }
+.float { position: fixed; z-index: 90; pointer-events: none; font-weight: 700; font-size: 22px; color: #D99A1E; animation: floatup 1s forwards; text-shadow: 0 2px 0 #fff; white-space: nowrap; }
+.toast { position: fixed; left: 50%; top: 18px; transform: translateX(-50%); z-index: 120; background: var(--ink); color: var(--bg); padding: 12px 18px; border-radius: 16px; font-weight: 600; animation: pop .3s; max-width: 90vw; text-align: center; }
+@keyframes enter { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@keyframes bob { 0%, 100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(-6px) rotate(3deg); } }
+@keyframes yay { 0% { transform: translateY(0); } 35% { transform: translateY(-16px) rotate(-12deg) scale(1.2); } 70% { transform: translateY(0) rotate(8deg); } 100% { transform: none; } }
+@keyframes hmm { 0%, 100% { transform: rotate(0); } 30% { transform: rotate(-18deg); } 60% { transform: rotate(12deg); } }
+@keyframes bump { 50% { transform: scale(1.2); } }
+@keyframes twinkle { 0%, 100% { opacity: 0; transform: scale(.5); } 50% { opacity: 1; transform: scale(1.1); } }
+@keyframes wiggle { 0%, 88%, 100% { transform: rotate(0); } 92% { transform: rotate(-12deg); } 96% { transform: rotate(12deg); } }
+@keyframes shine { 0%, 100% { box-shadow: 0 0 0 rgba(242,179,61,0); } 50% { box-shadow: 0 0 18px rgba(242,179,61,.7); } }
+@keyframes starIn { 0% { transform: scale(0) rotate(-90deg); opacity: 0; } 70% { transform: scale(1.3) rotate(10deg); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+@keyframes fall { to { transform: translateY(110vh) rotate(720deg); } }
+@keyframes floatup { to { transform: translateY(-60px); opacity: 0; } }
 @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-7px); } 75% { transform: translateX(7px); } }
 @keyframes pulse { 50% { transform: scale(1.06); } }
 @keyframes pop { 0% { transform: scale(.4); } 70% { transform: scale(1.12); } 100% { transform: scale(1); } }
 @keyframes hop { 40% { transform: translateY(-14px); } }
 @keyframes said { 0% { background: var(--hl); } 100% { background: transparent; } }
 .shake { animation: shake .35s; }
-.flashed { animation: none; }
+.word-big.flashed, .flash-zone * { animation: none !important; }
 body.calm *, body.calm *::before { animation: none !important; transition: none !important; }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 

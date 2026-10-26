@@ -136,6 +136,45 @@ function beep(kind) {
   } catch (e) { /* */ }
 }
 
+// ---------- Animations (coupées en mode calme) ----------
+const calm = () => S().calm || matchMedia('(prefers-reduced-motion: reduce)').matches;
+function confetti(n = 50) {
+  if (calm()) return;
+  const box = document.createElement('div'); box.className = 'confetti';
+  const bits = ['🪶', '⭐', '✨', '🎉', '💛', '🟦', '🟥', '🟨'];
+  for (let i = 0; i < n; i++) {
+    const s = document.createElement('span');
+    s.textContent = pick(bits);
+    s.style.left = Math.random() * 100 + 'vw';
+    s.style.animationDuration = (1.8 + Math.random() * 1.6) + 's';
+    s.style.animationDelay = Math.random() * 0.6 + 's';
+    box.appendChild(s);
+  }
+  document.body.appendChild(box);
+  setTimeout(() => box.remove(), 4200);
+}
+function floatText(el, txt) {
+  if (calm() || !el) return;
+  const r = el.getBoundingClientRect(), f = document.createElement('div');
+  f.className = 'float'; f.textContent = txt;
+  f.style.left = (r.left + r.width / 2 - 24) + 'px'; f.style.top = (r.top - 6) + 'px';
+  document.body.appendChild(f); setTimeout(() => f.remove(), 1100);
+}
+function toast(html) {
+  const t = document.createElement('div'); t.className = 'toast'; t.innerHTML = html;
+  document.body.appendChild(t); setTimeout(() => t.remove(), 2600);
+}
+// Plume réagit : saut quand c'est juste, tête penchée quand on se trompe.
+function owlReact(kind) {
+  const o = document.querySelector('.sowl'); if (!o || calm()) return;
+  o.classList.remove('yay', 'hmm'); void o.offsetWidth; o.classList.add(kind);
+}
+function bumpPlumes(n = 1) {
+  const c = document.querySelector('[data-pl]'); if (!c) return;
+  c.textContent = +c.textContent + n;
+  const box = c.parentElement; box.classList.remove('bump'); void box.offsetWidth; box.classList.add('bump');
+}
+
 // ---------- Affichage du texte (syllabes en couleur, lettres muettes en gris) ----------
 function sylHTML(markup, counter = { n: 0 }) {
   return markup.split('-').map(s => {
@@ -223,7 +262,7 @@ function home() {
       <button class="icon-btn" data-adult aria-label="Espace adulte">⚙️</button>
     </div>
     <div class="hero">
-      <button class="owl" data-owl>🦉</button>
+      <button class="owl" data-owl>🦉<span class="zzz">✨</span></button>
       <div class="bubble">Coucou ${esc(p.name)} !<br>${mins ? `Tu as déjà lu ${mins} min aujourd'hui. Bravo !` : 'On lit ensemble ?'}</div>
     </div>
     <button class="mission" data-mission>
@@ -333,7 +372,8 @@ function runSession(cfg) {
       <div class="sess-top">
         <button class="icon-btn" data-quit aria-label="Arrêter">✕</button>
         <div class="bar"><i style="width:${Math.round(st.i / cfg.items.length * 100)}%"></i></div>
-        <div class="pl">🪶 ${P().plumes + st.good}</div>
+        <span class="sowl" aria-hidden="true">🦉</span>
+        <div class="pl">🪶 <span data-pl>${P().plumes + st.good}</span></div>
       </div>
       <div class="ex" id="ex"></div>`, 'sess');
     $('[data-quit]').onclick = () => { stopSpeak(); (cfg.onQuit || home)(); };
@@ -341,11 +381,11 @@ function runSession(cfg) {
     const api = {
       get first() { return misses === 0 && !helped; },
       get misses() { return misses; },
-      miss() { misses++; },
+      miss() { misses++; owlReact('hmm'); },
       help() { helped = true; },
       async next(counted = true, wait) {
         if (settled) return; settled = true;
-        if (counted) { st.answered++; if (misses === 0 && !helped) st.good++; }
+        if (counted) { st.answered++; if (misses === 0 && !helped) { st.good++; bumpPlumes(); } owlReact('yay'); }
         track(Date.now() - st.last); st.last = Date.now(); save();
         if (wait) await wait; else await new Promise(r => setTimeout(r, 500));
         st.i++; view();
@@ -366,12 +406,13 @@ function runSession(cfg) {
       <div class="center-col end">
         <div class="big-emoji ${S().calm ? '' : 'pop'}">${early ? '🌙' : '🎉'}</div>
         <h1 class="title">${early ? 'Bien joué, à demain !' : 'Séance terminée !'}</h1>
-        ${early ? '' : `<div class="end-stars">${stars(n)}</div>`}
+        ${early ? '' : `<div class="end-stars">${[1, 2, 3].map(k => `<span class="st ${k <= n ? 'on' : ''}" style="animation-delay:${0.25 + k * 0.3}s">★</span>`).join('')}</div>`}
         <p class="lead">Tu as gagné <b>${st.good} plume${st.good > 1 ? 's' : ''}</b> 🪶</p>
         ${after !== before ? `<div class="new-friend"><span>${after[1]}</span>Un nouvel ami arrive dans le nid : <b>${esc(after[2])}</b> !</div>` : ''}
         <button class="btn" data-home>Retour à l'accueil</button>
       </div>`);
-    if (!early) { beep('win'); speak(VOICE.end); }
+    if (!early) { beep('win'); speak(VOICE.end); confetti(n === 3 ? 80 : n === 2 ? 50 : 25); }
+    if (after !== before) setTimeout(() => toast(`${after[1]} ${esc(after[2])} arrive dans le nid !`), 900);
     $('[data-home]').onclick = cfg.onQuit || home;
   };
   view();
@@ -381,7 +422,7 @@ function runSession(cfg) {
 async function answer(btn, ok, api, { all, correct, word } = {}) {
   if (ok) {
     btn.classList.add('ok'); (all || []).forEach(b => { b.disabled = true; });
-    beep('ok');
+    beep('ok'); if (api.first) floatText(btn, '+1 🪶');
     if (word) stat(word, api.first);
     api.next(true, api.first ? speak(pick(CHEERS)) : speak('Oui, c\'est ça !'));
   } else {
@@ -470,6 +511,7 @@ const EX = {
         if (pos === w.sy.length) {
           beep('ok'); stat(w.p, api.first);
           box.querySelector('.slots').classList.add('ok');
+          if (api.first) floatText(box.querySelector('.slots'), '+1 🪶');
           speak(w.p).then(() => api.next(true, api.first ? speak(pick(CHEERS)) : Promise.resolve()));
         }
       } else {
@@ -714,6 +756,7 @@ function conjTableHTML(v, t) {
 function conjAnswer(btn, ok, api, all, correct, it, fill) {
   if (!ok) return answer(btn, false, api, { all, correct });
   btn.classList.add('ok'); all.forEach(b => { b.disabled = true; }); beep('ok');
+  if (api.first) floatText(btn, '+1 🪶');
   if (fill) fill();
   api.next(true, speak(conjSentence(it.v, it.t, it.i)).then(ok2 => ok2 && api.first ? speak(pick(CHEERS)) : null));
 }
@@ -838,7 +881,7 @@ EX.math = function (box, it, api) {
     const all = [...phase.querySelectorAll('.card')];
     all.forEach(btn => btn.onclick = () => {
       if (btn.dataset.o !== op) { answer(btn, false, api, { all, correct: all.find(x => x.dataset.o === op) }); if (api.misses === 1) setTimeout(() => speak(MATH_VOICE.opHint), 900); return; }
-      btn.classList.add('ok'); beep('ok');
+      btn.classList.add('ok'); beep('ok'); owlReact('yay');
       speak(`Oui, c'est ${OP_NAME[op]} !`).then(ok => { if (ok) speak(MATH_VOICE.calc); });
       calcPhase();
     });
@@ -859,7 +902,7 @@ EX.math = function (box, it, api) {
       if (!val) return;
       if (+val === res) {
         ans.classList.add('good'); phase.querySelectorAll('.key').forEach(x => { x.disabled = true; });
-        beep('ok');
+        beep('ok'); if (api.first) floatText(ans, '+1 🪶');
         api.next(true, speak(mathAnswerSay(it.pb)).then(ok => ok && api.first ? speak(pick(CHEERS)) : null));
       } else {
         fails++; api.miss(); beep('ko'); ans.classList.remove('shake'); void ans.offsetWidth; ans.classList.add('shake');
@@ -908,7 +951,7 @@ function hunt(round = 0, tot = { found: 0, missed: 0, wrong: 0 }, sets = shuffle
         <p class="lead">Lettres trouvées : <b>${tot.found}</b> / 24<br>Erreurs : <b>${tot.wrong}</b></p>
         <p class="lead">+${gain} plumes 🪶</p>
         <button class="btn" data-again>Rejouer</button><button class="btn ghost" data-back2>Retour</button></div>`);
-      beep('win');
+      beep('win'); confetti(50);
       $('[data-again]').onclick = () => hunt();
       $('[data-back2]').onclick = attention;
     }, missed ? 1600 : 700);
@@ -917,6 +960,7 @@ function hunt(round = 0, tot = { found: 0, missed: 0, wrong: 0 }, sets = shuffle
     if (cells[+c.dataset.i] === target) {
       if (c.classList.contains('ok')) return;
       c.classList.add('ok'); beep('tap'); found++; $('[data-f]').textContent = found;
+      if (found === 8) confetti(20);
       if (found === 8) end();
     } else { c.classList.remove('ko'); void c.offsetWidth; c.classList.add('ko'); beep('ko'); wrong++; }
   });
@@ -956,7 +1000,7 @@ function simon() {
       return;
     }
     input++;
-    if (input === seq.length) { lock = true; msg.textContent = pick(CHEERS); setTimeout(grow, 800); }
+    if (input === seq.length) { lock = true; msg.textContent = pick(CHEERS); floatText(msg, '✨'); setTimeout(grow, 800); }
   });
 }
 
@@ -977,7 +1021,7 @@ function nest() {
   const nx = FRIENDS.find(f => f[0] > p.plumes);
   screen(`${topBar('Le nid de Plume')}
     <p class="lead small">Chaque plume gagnée fait venir de nouveaux amis dans le nid.</p>
-    <div class="friends">${FRIENDS.map(f => `<div class="friend ${p.plumes >= f[0] ? '' : 'locked'}"><span>${p.plumes >= f[0] ? f[1] : '🥚'}</span>${p.plumes >= f[0] ? esc(f[2]) : `${f[0]} 🪶`}</div>`).join('')}</div>
+    <div class="friends">${FRIENDS.map(f => `<div class="friend ${p.plumes >= f[0] ? '' : 'locked'}" style="--d:${(f[0] % 7) * 0.3}s"><span>${p.plumes >= f[0] ? f[1] : '🥚'}</span>${p.plumes >= f[0] ? esc(f[2]) : `${f[0]} 🪶`}</div>`).join('')}</div>
     ${nx ? `<p class="lead small">Encore <b>${nx[0] - p.plumes}</b> plumes pour le prochain ami !</p>` : '<p class="lead">Tous les amis sont là. Tu es incroyable !</p>'}`);
 }
 
