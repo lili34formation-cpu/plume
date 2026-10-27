@@ -90,7 +90,27 @@ function gameWords(filter = () => true) {
   return gameSteps().flatMap(s => s.W).filter(w => filter(w) && !seen.has(w.p) && seen.add(w.p));
 }
 // En-tête de jeu : manche en cours + bouton retour.
-const gameTop = (title, i, total) => `${topBar(title, gamesHub)}<div class="bar"><i style="width:${Math.round(i / total * 100)}%"></i></div>`;
+// Petite scène animée : Plume avance vers le drapeau à chaque manche, dans le décor du jeu.
+const SCENES = {
+  bulles: ['🫧', '🐠', '🫧', '🐟'], intrus: ['🔎', '🕵️', '❓', '🔎'], manque: ['🧩', '✨', '🧩', '⭐'], quiparle: ['💬', '🗣️', '💭', '💬'],
+  suites: ['🔁', '⭐', '🌙', '⭐'], monstre: ['🍩', '👾', '🍪', '🍭'], robot: ['⚙️', '🔋', '🔩', '⚡'], sudoku: ['🐶', '🐱', '🐰', '🐸'],
+};
+function gameTop(title, i, total) {
+  const g = GAMES.find(x => x.name === title) || {};
+  const deco = SCENES[g.id] || ['✨', '⭐', '✨', '⭐'];
+  const pct = k => Math.round(Math.max(0, k) / total * 100);
+  // Plume part de la case d'avant et marche jusqu'à la nouvelle.
+  setTimeout(() => { const w = $('.walker'); if (w) { w.style.left = `calc(${pct(i)}% * 0.82)`; w.classList.add('walk'); } $('.gscene .track i') && ($('.gscene .track i').style.width = pct(i) + '%'); }, 60);
+  return `${topBar(title, gamesHub)}
+    <div class="gscene" aria-hidden="true">
+      ${deco.map((d, k) => `<span class="deco d${k}">${d}</span>`).join('')}
+      <span class="cloud c1">☁️</span><span class="cloud c2">☁️</span>
+      <div class="track"><i style="width:${pct(i - 1)}%"></i></div>
+      <span class="walker" style="left:calc(${pct(i - 1)}% * 0.82)">${owlHTML()}</span>
+      <span class="goal">🏁</span>
+      <span class="count">${i + 1} / ${total}</span>
+    </div>`;
+}
 
 // ---------- Le memory des mots ----------
 function gMemory() {

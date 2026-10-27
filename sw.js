@@ -1,5 +1,5 @@
 // Plume — mise en cache pour fonctionner hors connexion.
-const CACHE = 'plume-v4';
+const CACHE = 'plume-v5';
 const CORE = ['./', 'index.html', 'styles.css', 'content.js', 'conj.js', 'math.js', 'games.js', 'app.js', 'manifest.json', 'icon.svg'];
 
 self.addEventListener('install', e => {
