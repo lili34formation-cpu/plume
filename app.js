@@ -252,7 +252,11 @@ function createProfile(first) {
 }
 
 // ---------- Accueil ----------
-function nextStep() { const p = P(); return STEPS.find(s => !p.steps[s.id]) || null; }
+// Séance du jour : d'abord les sons choisis par l'adulte (tant qu'ils n'ont pas 3 étoiles), sinon le premier son pas encore fait.
+function nextStep() {
+  const p = P(), focus = PROG().focus.map(id => STEP_BY_ID[id]).filter(Boolean);
+  return focus.find(s => (p.steps[s.id] || 0) < 3) || STEPS.find(s => !p.steps[s.id]) || null;
+}
 function doneSteps() { const p = P(); return STEPS.filter(s => p.steps[s.id]); }
 function friend(pl) { return FRIENDS.filter(f => pl >= f[0]).pop(); }
 
@@ -274,20 +278,17 @@ function home() {
       <span class="m-play">▶</span>
       <span><b>Ma séance du jour</b><small>${nx ? `Le son <span class="rd">${esc(nx.title)}</span>` : 'Révision des sons'}</small></span>
     </button>
-    ${(() => { const dg = dailyGame(), dn = dailyDone(); return `<button class="daily ${dn ? 'done' : ''}" data-daily><span class="d-e">${dg.e}</span><span><b>Défi du jour ${dn ? '✓' : ''}</b><small>${esc(dg.name)}${dn ? ' — réussi !' : ' — plumes ×2'}</small></span></button>`; })()}
-    <div class="tiles">
-      <button class="tile t1" data-go="path"><span>🗺️</span>Le chemin des sons</button>
-      <button class="tile t2" data-go="stories"><span>📚</span>Les histoires</button>
-      <button class="tile t3" data-go="twins"><span>👯</span>Les lettres jumelles</button>
-      <button class="tile t4" data-go="games"><span>🎮</span>Les jeux</button>
-      <button class="tile t5" data-go="conj"><span>✏️</span>Les verbes</button>
-      <button class="tile t6" data-go="maths"><span>🔢</span>Les problèmes</button>
+    ${PROG().hide.includes('games') ? '' : (() => { const dg = dailyGame(), dn = dailyDone(); return `<button class="daily ${dn ? 'done' : ''}" data-daily><span class="d-e">${dg.e}</span><span><b>Défi du jour ${dn ? '✓' : ''}</b><small>${esc(dg.name)}${dn ? ' — réussi !' : ' — plumes ×2'}</small></span></button>`; })()}
+    <div class="tiles">${(() => { const hide = PROG().hide; return [
+      ['path', 't1', '🗺️', 'Le chemin des sons'], ['stories', 't2', '📚', 'Les histoires'], ['twins', 't3', '👯', 'Les lettres jumelles'],
+      ['games', 't4', '🎮', 'Les jeux'], ['conj', 't5', '✏️', 'Les verbes'], ['maths', 't6', '🔢', 'Les problèmes'],
+    ].filter(t => !hide.includes(t[0])).map(([g, c, e, l]) => `<button class="tile ${c}" data-go="${g}"><span>${e}</span>${l}</button>`).join(''); })()}
     </div>
     <button class="nest-link" data-go="nest">🪺 Le nid de Plume : ${FRIENDS.filter(f => p.plumes >= f[0]).length} ami(s)</button>
   `, 'home');
   $('[data-owl]').onclick = e => { e.currentTarget.classList.remove('hop'); void e.currentTarget.offsetWidth; e.currentTarget.classList.add('hop'); speak(VOICE.hello); };
   $('[data-switch]').onclick = profiles;
-  $('[data-daily]').onclick = () => dailyGame().run();
+  const dly = $('[data-daily]'); if (dly) dly.onclick = () => dailyGame().run();
   $('[data-adult]').onclick = () => adultGate(adult);
   $('[data-mission]').onclick = () => (nx ? startStep(nx) : startReview());
   $$('[data-go]').forEach(b => b.onclick = () => ({ path, stories, twins, games: gamesHub, nest, conj: conjList, maths: mathList })[b.dataset.go]());
@@ -332,21 +333,29 @@ function wordItems(w, types) {
   });
 }
 
+const PROG_DEFAULT = { focus: [], hide: [], ex: { ear: true, syl: true, word: true, build: true, flash: true, sentence: true }, length: 'normal' };
+const PROG = () => { const p = P(); const g = (p && p.prog) || {}; return { ...PROG_DEFAULT, ...g, ex: { ...PROG_DEFAULT.ex, ...(g.ex || {}) } }; };
+const EX_COUNT = { court: { ear: 2, syl: 2, word: 3, build: 1, flash: 2, sentence: 1 }, normal: { ear: 4, syl: 3, word: 4, build: 2, flash: 3, sentence: 2 }, long: { ear: 6, syl: 4, word: 6, build: 3, flash: 4, sentence: 2 } };
 function stepItems(st) {
+  const pr = PROG(), cnt = EX_COUNT[pr.length] || EX_COUNT.normal;
+  return stepItemsRaw(st, cnt).filter(it => it.type === 'intro' || pr.ex[it.type] !== false);
+}
+function stepItemsRaw(st, cnt) {
   const items = [{ type: 'intro', step: st }];
   const noPool = st.x ? ALL_WORDS.filter(w => !st.x.test(w.p.toLowerCase())) : [];
-  const ear = !st.ear ? [] : shuffle([...shuffle(st.W).slice(0, 2).map(w => ({ w, yes: true })), ...shuffle(noPool).slice(0, 2).map(w => ({ w, yes: false }))]);
+  const half = Math.ceil(cnt.ear / 2);
+  const ear = !st.ear ? [] : shuffle([...shuffle(st.W).slice(0, half).map(w => ({ w, yes: true })), ...shuffle(noPool).slice(0, cnt.ear - half).map(w => ({ w, yes: false }))]);
   ear.forEach((e, i) => items.push({ type: 'ear', step: st, w: e.w, yes: e.yes, first: i === 0 }));
-  if (st.syl) shuffle(st.syl).slice(0, 3).forEach((s, i) => items.push({ type: 'syl', target: s, options: shuffle([s, ...others(st.syl, 2, x => x === s)]), first: i === 0 }));
+  if (st.syl) shuffle(st.syl).slice(0, cnt.syl).forEach((s, i) => items.push({ type: 'syl', target: s, options: shuffle([s, ...others(st.syl, 2, x => x === s)]), first: i === 0 }));
   const ws = shuffle(st.W);
-  ws.slice(0, 4).forEach((w, i) => items.push({ ...wordItems(w, ['word'])[0], first: i === 0 }));
-  ws.filter(w => w.sy.length >= 2).slice(0, 2).forEach((w, i) => items.push({ ...wordItems(w, ['build'])[0], first: i === 0 }));
-  shuffle(st.W).slice(0, 3).forEach((w, i) => items.push({ ...wordItems(w, ['flash'])[0], first: i === 0 }));
-  st.S.forEach((s, i) => items.push({ type: 'sentence', s, first: i === 0 }));
+  [...ws, ...shuffle(st.W)].slice(0, cnt.word).forEach((w, i) => items.push({ ...wordItems(w, ['word'])[0], first: i === 0 }));
+  ws.filter(w => w.sy.length >= 2).slice(0, cnt.build).forEach((w, i) => items.push({ ...wordItems(w, ['build'])[0], first: i === 0 }));
+  shuffle(st.W).slice(0, cnt.flash).forEach((w, i) => items.push({ ...wordItems(w, ['flash'])[0], first: i === 0 }));
+  st.S.slice(0, cnt.sentence).forEach((s, i) => items.push({ type: 'sentence', s, first: i === 0 }));
   return items;
 }
 function startStep(st) {
-  runSession({ items: stepItems(st), onEnd: (stars, early) => { if (!early) { const p = P(); p.steps[st.id] = Math.max(p.steps[st.id] || 0, stars); } } });
+  runSession({ log: { k: 'son', id: st.id }, items: stepItems(st), onEnd: (stars, early) => { if (!early) { const p = P(); p.steps[st.id] = Math.max(p.steps[st.id] || 0, stars); } } });
 }
 function startReview() {
   const p = P();
@@ -361,7 +370,7 @@ function startReview() {
   pool.filter(w => w.sy.length >= 2).slice(4, 6).forEach((w, i) => items.push({ ...wordItems(w, ['build'])[0], first: i === 0 }));
   pool.slice(6, 9).forEach((w, i) => items.push({ ...wordItems(w, ['flash'])[0], first: i === 0 }));
   shuffle(done.flatMap(s => s.S)).slice(0, 2).forEach((s, i) => items.push({ type: 'sentence', s, first: i === 0 }));
-  runSession({ items });
+  runSession({ log: { k: 'revision', id: 'revision' }, items });
 }
 
 // ---------- Séance : une consigne, une tâche à la fois ----------
@@ -371,7 +380,7 @@ function runSession(cfg) {
     if (st.i >= cfg.items.length) return finish(false);
     const pauseAfter = S().session * 60000;
     if (!st.paused && Date.now() - st.start > pauseAfter && cfg.items.length - st.i > 2) {
-      st.paused = true;
+      st.paused = true; P().pauses = (P().pauses || 0) + 1;
       return pauseScreen(view, () => finish(true));
     }
     const it = cfg.items[st.i];
@@ -383,16 +392,21 @@ function runSession(cfg) {
         <div class="pl">🪶 <span data-pl>${P().plumes + st.good}</span></div>
       </div>
       <div class="ex" id="ex"></div>`, 'sess');
-    $('[data-quit]').onclick = () => { stopSpeak(); (cfg.onQuit || home)(); };
+    $('[data-quit]').onclick = () => { stopSpeak(); logSession(cfg, st, true); (cfg.onQuit || home)(); };
     let misses = 0, helped = false, settled = false;
     const api = {
       get first() { return misses === 0 && !helped; },
       get misses() { return misses; },
       miss() { misses++; owlReact('hmm'); },
       help() { helped = true; },
+      conf(target, chosen) { const p = P(); p.conf = p.conf || {}; const k = `${target} → ${chosen}`; p.conf[k] = (p.conf[k] || 0) + 1; },
       async next(counted = true, wait) {
         if (settled) return; settled = true;
-        if (counted) { st.answered++; if (misses === 0 && !helped) { st.good++; bumpPlumes(); } owlReact('yay'); }
+        if (counted) {
+          st.answered++; if (misses === 0 && !helped) { st.good++; bumpPlumes(); } owlReact('yay');
+          const p = P(); p.ex = p.ex || {}; const e = p.ex[it.type] || (p.ex[it.type] = { ok: 0, ko: 0, help: 0 });
+          misses === 0 && !helped ? e.ok++ : e.ko++; if (helped) e.help++;
+        }
         track(Date.now() - st.last); st.last = Date.now(); save();
         if (wait) await wait; else await new Promise(r => setTimeout(r, 500));
         st.i++; view();
@@ -408,6 +422,7 @@ function runSession(cfg) {
     const before = friend(p.plumes);
     p.plumes += st.good; p.sessions++;
     if (cfg.onEnd) cfg.onEnd(n, early);
+    logSession(cfg, st, early, n);
     save();
     const after = friend(p.plumes);
     screen(`
@@ -428,8 +443,15 @@ function runSession(cfg) {
   view();
 }
 
+// Historique pour le bilan : chaque séance ou jeu terminé (ou arrêté).
+function logEntry(e) { const p = P(); if (!p) return; p.log = p.log || []; p.log.push({ d: dayKey(), t: Date.now(), ...e }); if (p.log.length > 800) p.log.splice(0, p.log.length - 800); save(); }
+function logSession(cfg, st, early, n = 0) {
+  if (!cfg.log || st.logged) return; st.logged = true;
+  logEntry({ ...cfg.log, good: st.good, tot: st.answered, n: early ? 0 : n, early: !!early, sec: Math.round((Date.now() - st.start) / 1000) });
+}
+
 // Réponse à une question à choix : bonne réponse → on passe ; erreur → on réessaie, avec un indice après 2 erreurs.
-async function answer(btn, ok, api, { all, correct, word } = {}) {
+async function answer(btn, ok, api, { all, correct, word, conf } = {}) {
   if (ok) {
     btn.classList.add('ok'); (all || []).forEach(b => { b.disabled = true; });
     beep('ok'); if (api.first) floatText(btn, '+1 🪶');
@@ -437,6 +459,7 @@ async function answer(btn, ok, api, { all, correct, word } = {}) {
     api.next(true, api.first ? speak(pick(CHEERS)) : speak('Oui, c\'est ça !'));
   } else {
     btn.classList.add('ko'); btn.disabled = true; beep('ko'); api.miss();
+    if (conf) api.conf(conf[0], conf[1]);
     if (api.misses >= 2 && correct) correct.classList.add('hint');
     speak(pick(OOPS));
   }
@@ -484,7 +507,7 @@ const EX = {
     const play = async () => { if (it.first && !(await speak(VOICE.listenChoose))) return; speak(it.target); };
     box.querySelector('[data-play]').onclick = () => speak(it.target);
     const all = [...box.querySelectorAll('.card')];
-    all.forEach(b => b.onclick = () => answer(b, b.dataset.o === it.target, api, { all, correct: all.find(x => x.dataset.o === it.target) }));
+    all.forEach(b => b.onclick = () => answer(b, b.dataset.o === it.target, api, { all, correct: all.find(x => x.dataset.o === it.target), conf: [it.target, b.dataset.o] }));
     play();
   },
 
@@ -551,7 +574,7 @@ const EX = {
     };
     zone.querySelector('.ready').onclick = show;
     const all = [...opts.querySelectorAll('.card')];
-    all.forEach(b => b.onclick = () => answer(b, b.dataset.o === it.w.p, api, { all, correct: all.find(x => x.dataset.o === it.w.p), word: it.w.p }));
+    all.forEach(b => b.onclick = () => answer(b, b.dataset.o === it.w.p, api, { all, correct: all.find(x => x.dataset.o === it.w.p), word: it.w.p, conf: [it.w.p, b.dataset.o] }));
   },
 
   sentence(box, it, api) {
@@ -577,7 +600,7 @@ const EX = {
     const play = async () => { if (it.first && !(await speak(VOICE.twins))) return; speak(it.target); };
     box.querySelector('[data-play]').onclick = () => speak(it.target);
     const all = [...box.querySelectorAll('.card')];
-    all.forEach(b => b.onclick = () => answer(b, b.dataset.o === it.target, api, { all, correct: all.find(x => x.dataset.o === it.target) }));
+    all.forEach(b => b.onclick = () => answer(b, b.dataset.o === it.target, api, { all, correct: all.find(x => x.dataset.o === it.target), conf: [it.target, b.dataset.o] }));
     play();
   },
 
@@ -686,7 +709,7 @@ function story(sto) {
   };
   $('[data-qs]').onclick = () => {
     const p = P(); p.stories[sto.id] = (p.stories[sto.id] || 0) + 1; track(60000); save();
-    runSession({ items: sto.questions.map(([q, a], i) => ({ type: 'storyq', q, a, first: i === 0 })), onQuit: stories });
+    runSession({ log: { k: 'histoire', id: sto.id }, items: sto.questions.map(([q, a], i) => ({ type: 'storyq', q, a, first: i === 0 })), onQuit: stories });
   };
 }
 const wordCount = lines => lines.join(' ').split(' ').filter(t => /[a-zàâçéèêëîïôûùüœ]/i.test(t)).length;
@@ -717,7 +740,7 @@ function twins() {
     const pr = PAIR_BY_ID[b.dataset.p];
     const syls = pairSyllables(pr);
     const items = Array.from({ length: 10 }, (_, i) => { const pair = pick(syls); return { type: 'twin', pair, target: pick(pair), first: i === 0 }; });
-    runSession({ items, onQuit: twins, onEnd: (n, early) => { if (!early) { const q = P(); q.twins[pr.id] = Math.max(q.twins[pr.id] || 0, n); } } });
+    runSession({ log: { k: 'jumelles', id: pr.id }, items, onQuit: twins, onEnd: (n, early) => { if (!early) { const q = P(); q.twins[pr.id] = Math.max(q.twins[pr.id] || 0, n); } } });
   });
 }
 
@@ -752,7 +775,7 @@ function conjItems(l) {
   return shuffle(items.slice(1)).reduce((a, x) => (a.push(x), a), [items[0]]);
 }
 function startConj(l) {
-  runSession({ items: conjItems(l), onQuit: conjList, onEnd: (n, early) => { if (!early) { const p = P(); p.conj = p.conj || {}; p.conj[l.id] = Math.max(p.conj[l.id] || 0, n); } } });
+  runSession({ log: { k: 'verbe', id: l.id }, items: conjItems(l), onQuit: conjList, onEnd: (n, early) => { if (!early) { const p = P(); p.conj = p.conj || {}; p.conj[l.id] = Math.max(p.conj[l.id] || 0, n); } } });
 }
 const conjLine = (v, t, i) => { const f = formOf(v, t, i); return t === 'ip' ? cap(f) + ' !' : subject(i, f) + f; };
 function conjTableHTML(v, t) {
@@ -870,7 +893,7 @@ function mathList() {
     <div class="list">${LEVELS.map(l => `<button class="row" data-m="${l}"><span class="r-e">🔢</span><span class="r-t">Problèmes ${l}${l === p.level ? '<small>ta classe</small>' : ''}</span>${p.math[l] ? stars(p.math[l]) : ''}</button>`).join('')}</div>`);
   $$('[data-m]').forEach(b => b.onclick = () => {
     const lv = b.dataset.m;
-    runSession({ items: shuffle(MATH[lv]).map((pb, i) => ({ type: 'math', pb, lv, first: i === 0 })), onQuit: mathList,
+    runSession({ log: { k: 'maths', id: lv }, items: shuffle(MATH[lv]).map((pb, i) => ({ type: 'math', pb, lv, first: i === 0 })), onQuit: mathList,
       onEnd: (n, early) => { if (!early) { const q = P(); q.math = q.math || {}; q.math[lv] = Math.max(q.math[lv] || 0, n); } } });
   });
 }
@@ -890,7 +913,7 @@ EX.math = function (box, it, api) {
       <div class="opts ops">${MATH_OPS[it.lv].map(o => `<button class="card op" data-o="${o}">${o}</button>`).join('')}</div>`;
     const all = [...phase.querySelectorAll('.card')];
     all.forEach(btn => btn.onclick = () => {
-      if (btn.dataset.o !== op) { answer(btn, false, api, { all, correct: all.find(x => x.dataset.o === op) }); if (api.misses === 1) setTimeout(() => speak(MATH_VOICE.opHint), 900); return; }
+      if (btn.dataset.o !== op) { const p = P(); p.mathErr = p.mathErr || { op: 0, calc: 0 }; p.mathErr.op++; answer(btn, false, api, { all, correct: all.find(x => x.dataset.o === op) }); if (api.misses === 1) setTimeout(() => speak(MATH_VOICE.opHint), 900); return; }
       btn.classList.add('ok'); beep('ok'); owlReact('yay');
       speak(`Oui, c'est ${OP_NAME[op]} !`).then(ok => { if (ok) speak(MATH_VOICE.calc); });
       calcPhase();
@@ -916,7 +939,7 @@ EX.math = function (box, it, api) {
         beep('ok'); if (api.first) floatText(ans, '+1 🪶');
         api.next(true, speak(mathAnswerSay(it.pb)).then(ok => ok && api.first ? speak(pick(CHEERS)) : null));
       } else {
-        fails++; api.miss(); beep('ko'); ans.classList.remove('shake'); void ans.offsetWidth; ans.classList.add('shake');
+        fails++; api.miss(); beep('ko'); { const p = P(); p.mathErr = p.mathErr || { op: 0, calc: 0 }; p.mathErr.calc++; } ans.classList.remove('shake'); void ans.offsetWidth; ans.classList.add('shake');
         val = ''; show();
         if (fails >= 2) { ans.textContent = res; ans.classList.add('hint'); speak(mathAnswerSay(it.pb)); setTimeout(() => api.next(true, Promise.resolve()), 2500); }
         else speak(pick(OOPS));
@@ -1045,50 +1068,6 @@ function adultGate(then) {
   $('#g').focus();
 }
 
-function adult(tab = 'suivi') {
-  const p = P();
-  const tabs = [['suivi', 'Suivi'], ['reglages', 'Réglages'], ['conseils', 'Conseils'], ['profils', 'Profils']];
-  screen(`${topBar('Espace adulte')}
-    <div class="tabs">${tabs.map(([k, l]) => `<button class="${k === tab ? 'on' : ''}" data-t="${k}">${l}</button>`).join('')}</div>
-    <div class="panel">${({ suivi: suiviHTML, reglages: reglagesHTML, conseils: conseilsHTML, profils: profilsHTML })[tab](p)}</div>`, 'adult');
-  $$('[data-t]').forEach(b => b.onclick = () => adult(b.dataset.t));
-  if (tab === 'reglages') bindReglages();
-  if (tab === 'profils') bindProfils();
-}
-
-function suiviHTML(p) {
-  const days = Array.from({ length: 7 }, (_, i) => { const d = new Date(); d.setDate(d.getDate() - 6 + i); return d; });
-  const mins = days.map(d => Math.round((p.days[dayKey(d)] || 0) / 60));
-  const maxM = Math.max(10, ...mins);
-  const week = mins.reduce((a, b) => a + b, 0);
-  const hard = Object.entries(p.words).filter(([, s]) => s.ko > s.ok || s.ko >= 2).sort((a, b) => (b[1].ko - b[1].ok) - (a[1].ko - a[1].ok)).slice(0, 10);
-  const fl = p.fluence.slice(-8).reverse();
-  return `
-    <h3>${p.avatar} ${esc(p.name)}</h3>
-    <div class="kpis">
-      <div><b>${week}</b><span>min cette semaine</span></div>
-      <div><b>${p.sessions}</b><span>séances</span></div>
-      <div><b>${doneSteps().length}/${STEPS.length}</b><span>sons travaillés</span></div>
-    </div>
-    <h4>Temps de lecture (7 derniers jours)</h4>
-    <div class="bars">${days.map((d, i) => `<div class="bcol"><i style="height:${Math.round(mins[i] / maxM * 100)}%"></i><b>${mins[i] || ''}</b><span>${'dlmmjvs'[d.getDay()].toUpperCase()}</span></div>`).join('')}</div>
-    <p class="note">Objectif conseillé : 10 à 15 minutes par jour, plutôt que de longues séances.</p>
-    <h4>Les sons</h4>
-    <div class="sgrid">${STEPS.map(s => `<div class="sg ${p.steps[s.id] ? 'done' : ''}"><span class="rd">${esc(s.title)}</span>${p.steps[s.id] ? stars(p.steps[s.id]) : '—'}</div>`).join('')}</div>
-    <h4>Mots à retravailler</h4>
-    ${hard.length ? `<div class="chips rd">${hard.map(([w, s]) => `<span class="chip">${esc(w)} <small>${s.ko}✗ ${s.ok}✓</small></span>`).join('')}</div>` : '<p class="note">Rien à signaler pour le moment.</p>'}
-    <h4>Lecture à voix haute (chrono)</h4>
-    ${fl.length ? `<table class="tbl"><tr><th>Date</th><th>Histoire</th><th>Mots/min</th><th>Erreurs</th></tr>${fl.map(f => `<tr><td>${f.d.slice(8)}/${f.d.slice(5, 7)}</td><td>${esc(STORY_BY_ID[f.story] ? STORY_BY_ID[f.story].title : '')}</td><td><b>${f.wpm}</b></td><td>${f.errs}</td></tr>`).join('')}</table>`
-      : `<p class="note">Dans « Les histoires », appuyez sur « Chrono (adulte) » pendant que l'enfant lit à voix haute, puis notez ses erreurs.</p>`}
-    <p class="note">Repères indicatifs en fin d'année (mots lus correctement par minute) : CP ≈ 50, CE1 ≈ 70–80, CE2 ≈ 90–100. Ce qui compte surtout, c'est la progression de votre enfant par rapport à lui-même.</p>
-    <h4>Conjugaison (classe : ${esc(p.level || '—')})</h4>
-    <div class="sgrid wide">${CONJ.map(l => `<div class="sg ${(p.conj || {})[l.id] ? 'done' : ''}"><span>${l.level} · ${esc(l.title)}</span>${(p.conj || {})[l.id] ? stars(p.conj[l.id]) : '—'}</div>`).join('')}</div>
-    <h4>Problèmes de maths</h4>
-    <div class="sgrid">${LEVELS.map(l => `<div class="sg ${(p.math || {})[l] ? 'done' : ''}"><span>${l}</span>${(p.math || {})[l] ? stars(p.math[l]) : '—'}</div>`).join('')}</div>
-    <h4>Lettres jumelles</h4>
-    <div class="sgrid">${PAIRS.map(pr => `<div class="sg ${p.twins[pr.id] ? 'done' : ''}"><span class="rd">${esc(pr.a)}·${esc(pr.b)}</span>${p.twins[pr.id] ? stars(p.twins[pr.id]) : '—'}</div>`).join('')}</div>`;
-}
-
 function seg(key, opts) {
   const v = S()[key];
   return `<div class="seg" data-k="${key}">${opts.map(([val, l]) => `<button class="${val === v ? 'on' : ''}" data-v='${JSON.stringify(val)}'>${l}</button>`).join('')}</div>`;
@@ -1155,7 +1134,7 @@ function profilsHTML() {
 function bindProfils() {
   $$('[data-ren]').forEach(b => b.onclick = () => {
     const p = DB.profiles.find(x => x.id === b.dataset.ren);
-    const n = prompt('Nouveau prénom', p.name); if (n && n.trim()) { p.name = n.trim().slice(0, 20); save(); adult('profils'); }
+    const n = prompt('Nouveau prénom', p.name); if (n && n.trim()) { p.name = n.trim().slice(0, 20); save(); adult('groupe'); }
   });
   $$('[data-lvl]').forEach(sel => sel.onchange = () => { DB.profiles.find(x => x.id === sel.dataset.lvl).level = sel.value; save(); });
   $$('[data-del]').forEach(b => b.onclick = () => {
@@ -1163,7 +1142,7 @@ function bindProfils() {
     if (!confirm(`Supprimer ${p.name} et toute sa progression ?`)) return;
     DB.profiles = DB.profiles.filter(x => x !== p);
     if (DB.current === p.id) DB.current = DB.profiles[0] ? DB.profiles[0].id : null;
-    save(); DB.profiles.length ? adult('profils') : profiles();
+    save(); DB.profiles.length ? adult('groupe') : profiles();
   });
   $('[data-add]').onclick = () => createProfile(false);
   $('[data-exp]').onclick = () => {

@@ -59,6 +59,7 @@ function endGame(id, { n, text, gain }) {
   p.plumes += gain + bonus;
   p.games[id] = Math.max(p.games[id] || 0, n);
   p.games[id + '_n'] = (p.games[id + '_n'] || 0) + 1;
+  logEntry({ k: 'jeu', id, n });
   track(60000); save();
   const after = friend(p.plumes);
   screen(`
