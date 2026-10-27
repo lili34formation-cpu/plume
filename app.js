@@ -267,18 +267,19 @@ function home() {
       <button class="icon-btn" data-adult aria-label="Espace adulte">⚙️</button>
     </div>
     <div class="hero">
-      <button class="owl" data-owl>🦉<span class="zzz">✨</span></button>
+      <button class="owl" data-owl>${owlHTML()}<span class="zzz">✨</span></button>
       <div class="bubble">Coucou ${esc(p.name)} !<br>${mins ? `Tu as déjà lu ${mins} min aujourd'hui. Bravo !` : 'On lit ensemble ?'}</div>
     </div>
     <button class="mission" data-mission>
       <span class="m-play">▶</span>
       <span><b>Ma séance du jour</b><small>${nx ? `Le son <span class="rd">${esc(nx.title)}</span>` : 'Révision des sons'}</small></span>
     </button>
+    ${(() => { const dg = dailyGame(), dn = dailyDone(); return `<button class="daily ${dn ? 'done' : ''}" data-daily><span class="d-e">${dg.e}</span><span><b>Défi du jour ${dn ? '✓' : ''}</b><small>${esc(dg.name)}${dn ? ' — réussi !' : ' — plumes ×2'}</small></span></button>`; })()}
     <div class="tiles">
       <button class="tile t1" data-go="path"><span>🗺️</span>Le chemin des sons</button>
       <button class="tile t2" data-go="stories"><span>📚</span>Les histoires</button>
       <button class="tile t3" data-go="twins"><span>👯</span>Les lettres jumelles</button>
-      <button class="tile t4" data-go="attention"><span>🎯</span>Jeux d'attention</button>
+      <button class="tile t4" data-go="games"><span>🎮</span>Les jeux</button>
       <button class="tile t5" data-go="conj"><span>✏️</span>Les verbes</button>
       <button class="tile t6" data-go="maths"><span>🔢</span>Les problèmes</button>
     </div>
@@ -286,9 +287,10 @@ function home() {
   `, 'home');
   $('[data-owl]').onclick = e => { e.currentTarget.classList.remove('hop'); void e.currentTarget.offsetWidth; e.currentTarget.classList.add('hop'); speak(VOICE.hello); };
   $('[data-switch]').onclick = profiles;
+  $('[data-daily]').onclick = () => dailyGame().run();
   $('[data-adult]').onclick = () => adultGate(adult);
   $('[data-mission]').onclick = () => (nx ? startStep(nx) : startReview());
-  $$('[data-go]').forEach(b => b.onclick = () => ({ path, stories, twins, attention, nest, conj: conjList, maths: mathList })[b.dataset.go]());
+  $$('[data-go]').forEach(b => b.onclick = () => ({ path, stories, twins, games: gamesHub, nest, conj: conjList, maths: mathList })[b.dataset.go]());
 }
 
 // ---------- Chemin des sons ----------
@@ -377,7 +379,7 @@ function runSession(cfg) {
       <div class="sess-top">
         <button class="icon-btn" data-quit aria-label="Arrêter">✕</button>
         <div class="bar"><i style="width:${Math.round(st.i / cfg.items.length * 100)}%"></i></div>
-        <span class="sowl" aria-hidden="true">🦉</span>
+        <span class="sowl" aria-hidden="true">${owlHTML()}</span>
         <div class="pl">🪶 <span data-pl>${P().plumes + st.good}</span></div>
       </div>
       <div class="ex" id="ex"></div>`, 'sess');
@@ -415,11 +417,13 @@ function runSession(cfg) {
         ${early ? '' : `<div class="end-stars">${[1, 2, 3].map(k => `<span class="st ${k <= n ? 'on' : ''}" style="animation-delay:${0.25 + k * 0.3}s">★</span>`).join('')}</div>`}
         <p class="lead">Tu as gagné <b>${st.good} plume${st.good > 1 ? 's' : ''}</b> 🪶</p>
         ${after !== before ? `<div class="new-friend"><span>${after[1]}</span>Un nouvel ami arrive dans le nid : <b>${esc(after[2])}</b> !</div>` : ''}
+        ${early ? '' : '<button class="btn alt" data-bonus>🎁 Jeu bonus</button>'}
         <button class="btn" data-home>Retour à l'accueil</button>
       </div>`);
     if (!early) { beep('win'); speak(VOICE.end); confetti(n === 3 ? 80 : n === 2 ? 50 : 25); }
     if (after !== before) setTimeout(() => toast(`${after[1]} ${esc(after[2])} arrive dans le nid !`), 900);
     $('[data-home]').onclick = cfg.onQuit || home;
+    const bn = $('[data-bonus]'); if (bn) bn.onclick = () => GAME_BY_ID[pick(DAILY_IDS)].run();
   };
   view();
 }
@@ -924,21 +928,11 @@ EX.math = function (box, it, api) {
 };
 
 // ---------- Jeux d'attention ----------
-function attention() {
-  screen(`${topBar("Jeux d'attention")}
-    <div class="list">
-      <button class="row" data-g="hunt"><span class="r-e">🔍</span><span class="r-t">La chasse aux lettres<small>Trouve toutes les lettres cachées</small></span></button>
-      <button class="row" data-g="simon"><span class="r-e">🧠</span><span class="r-t">La suite de Plume<small>Retiens l'ordre et refais-le</small></span></button>
-      <button class="row" data-g="breathe"><span class="r-e">🫧</span><span class="r-t">La bulle de calme<small>Respirer pour mieux se concentrer</small></span></button>
-    </div>`);
-  $$('[data-g]').forEach(b => b.onclick = () => ({ hunt: () => hunt(), simon, breathe })[b.dataset.g]());
-}
-
 function hunt(round = 0, tot = { found: 0, missed: 0, wrong: 0 }, sets = shuffle(HUNT_LETTERS).slice(0, 3)) {
   const set = sets[round], target = set[0];
   const cells = shuffle([...Array(8).fill(target), ...Array.from({ length: 22 }, () => pick(set.slice(1)))]);
   let found = 0, wrong = 0;
-  screen(`${topBar('La chasse aux lettres', attention)}
+  screen(`${topBar('La chasse aux lettres', gamesHub)}
     <p class="inst">Manche ${round + 1} sur 3 — touche toutes les lettres <button class="target rd" data-say>${esc(target)}</button></p>
     <div class="grid rd">${cells.map((c, i) => `<button class="cell" data-i="${i}">${esc(c)}</button>`).join('')}</div>
     <p class="hunt-count">Trouvées : <b data-f>0</b> / 8</p>
@@ -960,7 +954,7 @@ function hunt(round = 0, tot = { found: 0, missed: 0, wrong: 0 }, sets = shuffle
         <button class="btn" data-again>Rejouer</button><button class="btn ghost" data-back2>Retour</button></div>`);
       beep('win'); confetti(50);
       $('[data-again]').onclick = () => hunt();
-      $('[data-back2]').onclick = attention;
+      $('[data-back2]').onclick = gamesHub;
     }, missed ? 1600 : 700);
   };
   $$('.cell').forEach(c => c.onclick = () => {
@@ -977,7 +971,7 @@ function hunt(round = 0, tot = { found: 0, missed: 0, wrong: 0 }, sets = shuffle
 function simon() {
   const PADS = ['🍓', '🐸', '🐳', '🌻'];
   let seq = [], input = 0, lock = true, best = 0;
-  screen(`${topBar('La suite de Plume', attention)}
+  screen(`${topBar('La suite de Plume', gamesHub)}
     <p class="inst" data-msg>${esc(VOICE.simon)}</p>
     <div class="pads">${PADS.map((e, i) => `<button class="pad p${i}" data-i="${i}">${e}</button>`).join('')}</div>
     <p class="hunt-count">Suite : <b data-len>0</b></p>
@@ -1012,14 +1006,14 @@ function simon() {
 }
 
 function breathe() {
-  screen(`${topBar('La bulle de calme', attention)}
+  screen(`${topBar('La bulle de calme', gamesHub)}
     <div class="center-col">
       <p class="lead">Suis la bulle : elle grossit quand tu inspires, elle rapetisse quand tu expires.</p>
       ${breatheHTML()}
       <button class="btn ghost" data-stop>Terminer</button>
     </div>`);
   const stop = runBreath(5, () => { const p = P(); p.plumes += 2; track(40000); save(); });
-  $('[data-stop]').onclick = () => { stop(); attention(); };
+  $('[data-stop]').onclick = () => { stop(); gamesHub(); };
 }
 
 // ---------- Le nid (récompenses) ----------
@@ -1029,7 +1023,11 @@ function nest() {
   screen(`${topBar('Le nid de Plume')}
     <p class="lead small">Chaque plume gagnée fait venir de nouveaux amis dans le nid.</p>
     <div class="friends">${FRIENDS.map(f => `<div class="friend ${p.plumes >= f[0] ? '' : 'locked'}" style="--d:${(f[0] % 7) * 0.3}s"><span>${p.plumes >= f[0] ? f[1] : '🥚'}</span>${p.plumes >= f[0] ? esc(f[2]) : `${f[0]} 🪶`}</div>`).join('')}</div>
-    ${nx ? `<p class="lead small">Encore <b>${nx[0] - p.plumes}</b> plumes pour le prochain ami !</p>` : '<p class="lead">Tous les amis sont là. Tu es incroyable !</p>'}`);
+    ${nx ? `<p class="lead small">Encore <b>${nx[0] - p.plumes}</b> plumes pour le prochain ami !</p>` : '<p class="lead">Tous les amis sont là. Tu es incroyable !</p>'}
+    <h2 class="lvl">🎩 La garde-robe de Plume</h2>
+    <div class="owl-preview">${owlHTML()}</div>
+    <div class="friends">${HATS.map(([n, h, name]) => `<button class="friend hatb ${p.plumes >= n ? '' : 'locked'} ${(p.hat || '') === h ? 'sel' : ''}" data-h="${h}" ${p.plumes >= n ? '' : 'disabled'}><span>${p.plumes >= n ? (h || '🚫') : '🔒'}</span>${p.plumes >= n ? esc(name) : `${n} 🪶`}</button>`).join('')}</div>`);
+  $$('.hatb:not(.locked)').forEach(b => b.onclick = () => { p.hat = b.dataset.h; save(); beep('ok'); nest(); });
 }
 
 // ---------- Espace adulte ----------

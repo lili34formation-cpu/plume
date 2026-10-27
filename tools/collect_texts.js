@@ -4,8 +4,8 @@
 const fs = require('fs');
 const path = require('path');
 const root = path.resolve(__dirname, '..');
-const src = ['content.js', 'conj.js', 'math.js'].map(f => fs.readFileSync(path.join(root, f), 'utf8')).join('\n');
-eval(src + '\nObject.assign(globalThis, { STEPS, STORIES, PAIRS, VOICE, CHEERS, OOPS, HUNT_LETTERS, CONJ, CONJ_VOICE, MATH, MATH_VOICE, OP_NAME, TENSES, PRONOUNS, plain, sayTokens, earSay, huntSay, pairSyllables, conjSentence, conjBare, formOf, subject, cap, personsOf, mathAnswerSay });');
+const src = ['content.js', 'conj.js', 'math.js', 'games.js'].map(f => fs.readFileSync(path.join(root, f), 'utf8')).join('\n');
+eval(src + '\nObject.assign(globalThis, { STEPS, STORIES, PAIRS, VOICE, CHEERS, OOPS, HUNT_LETTERS, CONJ, CONJ_VOICE, MATH, MATH_VOICE, OP_NAME, TENSES, PRONOUNS, plain, sayTokens, earSay, huntSay, pairSyllables, conjSentence, conjBare, formOf, subject, cap, personsOf, mathAnswerSay, GV, intrusSay, FAMILIES, familySay });');
 
 const out = new Set();
 const add = t => { if (t && String(t).trim()) out.add(String(t).trim()); };
@@ -33,6 +33,10 @@ for (const l of CONJ) for (const v of l.verbs) for (const t of l.tenses) for (co
 Object.values(MATH_VOICE).forEach(add);
 Object.values(OP_NAME).forEach(n => add(`Oui, c'est ${n} !`));
 for (const lv of Object.keys(MATH)) for (const p of MATH[lv]) { add(p[0]); sayTokens(p[0], true).forEach(add); add(mathAnswerSay(p)); }
+
+Object.values(GV).forEach(add);
+Object.keys(FAMILIES).forEach(k => add(familySay(k)));
+STEPS.filter(s => s.ear && s.x).forEach(s => add(intrusSay(s)));
 
 const list = [...out].map(t => ['fr-FR', t]);
 fs.writeFileSync(path.join(root, 'tools', 'texts.json'), JSON.stringify(list));

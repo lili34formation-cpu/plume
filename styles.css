@@ -299,6 +299,109 @@ body.mute-on .mu { color: var(--mute); }
 .prow .pa { font-size: 28px; }
 .prow b { flex: 1; }
 
+
+/* ---------- Les jeux ---------- */
+.daily { display: flex; align-items: center; gap: 14px; text-align: left; padding: 14px 16px; border-radius: 20px; background: linear-gradient(120deg, #FFF3C4, #FFE08A); color: #3A2E00; border: 2px solid var(--gold); font-size: 17px; animation: shine 2.6s infinite; }
+.daily b { display: block; font-size: 18px; }
+.daily small { font-size: 15px; }
+.daily .d-e { font-size: 40px; display: inline-block; animation: wiggle 2.4s infinite; }
+.daily.done { background: var(--green-bg); border-color: var(--green); color: var(--ink); animation: none; }
+.daily.done .d-e { animation: none; }
+.owl .hat, .sowl .hat, .owl-preview .hat { position: absolute; left: 50%; top: -0.32em; transform: translateX(-50%) rotate(-8deg); font-size: .5em; line-height: 1; pointer-events: none; }
+.sowl { position: relative; }
+.owl-preview { font-size: 90px; line-height: 1; position: relative; display: inline-block; margin: 18px auto 4px; animation: bob 2.6s ease-in-out infinite; }
+.hatb.sel { border-color: var(--brand); box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 30%, transparent); }
+.hatb:disabled { cursor: default; }
+
+/* Memory */
+.mem { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; width: 100%; }
+.mcard { height: 96px; border-radius: 18px; background: var(--brand); border: 3px solid var(--brand-d); position: relative; perspective: 600px; overflow: hidden; padding: 4px; }
+.mcard .back { font-size: 38px; }
+.mcard .face { display: none; }
+.mcard.open { background: var(--card); border-color: var(--line); animation: flip .3s; }
+.mcard.open .back { display: none; }
+.mcard.open .face { display: block; }
+.mcard .face.emo { font-size: 50px; }
+.mcard .face.word { font-size: clamp(16px, 5vw, 22px); font-weight: 700; letter-spacing: 0.03em; word-break: break-word; }
+.mcard.found { border-color: var(--green); background: var(--green-bg); animation: pop .4s; }
+@keyframes flip { from { transform: rotateY(90deg); } to { transform: rotateY(0); } }
+
+/* Bulles */
+.bub-head { display: flex; align-items: center; gap: 12px; justify-content: center; }
+.bub-head .play { width: 64px; height: 64px; font-size: 28px; flex: none; }
+.bub-area { position: relative; height: min(56vh, 460px); border-radius: 24px; overflow: hidden; background: linear-gradient(180deg, #CFE8FF 0%, #E9F5FF 60%, #FFF6E0 100%); border: 2px solid var(--line); }
+.bub { position: absolute; left: var(--x); bottom: -90px; width: 22%; aspect-ratio: 1; border-radius: 50%; font-size: clamp(18px, 5.5vw, 24px); font-weight: 700; letter-spacing: 0.02em; color: #1F3B66;
+  background: radial-gradient(circle at 32% 30%, rgba(255,255,255,.95) 0 12%, rgba(255,255,255,.35) 13% 40%, rgba(120,180,255,.35) 70%, rgba(80,150,255,.55));
+  border: 2px solid rgba(255,255,255,.8); box-shadow: inset -6px -8px 14px rgba(70,130,220,.25); animation: riseb var(--dur) linear var(--delay) infinite; }
+.bub.popped { animation: popb .4s forwards !important; }
+.bub.wob { animation: wob .4s, riseb var(--dur) linear var(--delay) infinite; }
+@keyframes riseb { from { transform: translateY(0); } to { transform: translateY(calc(-1 * min(56vh, 460px) - 110px)); } }
+@keyframes popb { to { transform: scale(1.6); opacity: 0; } }
+@keyframes wob { 50% { filter: hue-rotate(140deg); } }
+body.calm .bub { bottom: auto; top: var(--y); }
+@media (prefers-reduced-motion: reduce) { .bub { bottom: auto; top: var(--y); } }
+
+/* Intrus */
+.intrus { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; }
+.icard { position: relative; background: var(--card); border: 3px solid var(--line); border-radius: 20px; padding: 14px 6px 12px; display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; }
+.icard .emo { font-size: 50px; }
+.icard .rd { font-size: clamp(18px, 5.5vw, 24px); font-weight: 700; }
+.icard .mini { position: absolute; top: 6px; right: 6px; padding: 2px 6px; font-size: 13px; }
+.icard.ok { border-color: var(--green); background: var(--green-bg); animation: pop .35s; }
+.icard.ko { border-color: var(--red); animation: shake .35s; }
+
+/* Fusée */
+.sky { position: relative; height: 170px; border-radius: 22px; background: linear-gradient(180deg, #1B2350, #3B4C9B 70%, #6E86D6); overflow: hidden; }
+.sky .moon { position: absolute; top: 10px; right: 18px; font-size: 40px; animation: bob 3s infinite; }
+.sky .stars-bg { position: absolute; top: 16px; left: 18px; color: #FFE9A8; letter-spacing: 10px; animation: twinkle 2.5s infinite; }
+.rocket { position: absolute; left: 50%; margin-left: -22px; font-size: 44px; transform: rotate(-45deg); transition: bottom .6s cubic-bezier(.3,1.4,.5,1); }
+.rocket.launch { transition: bottom 1.2s ease-in; bottom: 120% !important; }
+.calc.big { font-size: calc(var(--rd-size) * 1.7); }
+
+/* Qui parle */
+.qform { font-size: calc(var(--rd-size) * 1.7); }
+.qform b { color: var(--s0); }
+.pronouns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; }
+.pronouns .card { justify-content: center; text-align: center; }
+
+/* Suites */
+.suite { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; font-size: clamp(30px, 9vw, 42px); background: var(--card); border: 2px solid var(--line); border-radius: 20px; padding: 14px 10px; }
+.suite span { animation: pop .35s both; }
+.q-mark { min-width: 1.2em; border-radius: 12px; border: 3px dashed var(--brand); color: var(--brand); font-weight: 700; text-align: center; }
+.q-mark.found { border-style: solid; border-color: var(--green); background: var(--green-bg); }
+.opts.four .card.emo { width: 76px; height: 76px; font-size: 40px; }
+
+/* Monstre */
+.monster { display: flex; align-items: center; gap: 10px; justify-content: center; }
+.monster .mouth { font-size: 84px; display: inline-block; animation: bob 1.8s infinite; }
+.monster.chomp .mouth { animation: chomp .25s 3; }
+.m-bubble { background: var(--card); border: 2px solid var(--line); border-radius: 16px; padding: 8px 12px; font-weight: 600; }
+.card.eaten { animation: eaten .55s forwards; }
+.fam { font-size: 20px; min-height: 1.4em; margin: 0; color: var(--green); font-weight: 700; }
+@keyframes chomp { 50% { transform: scale(1.18, .82); } }
+@keyframes eaten { to { transform: translateY(-150px) scale(.2) rotate(200deg); opacity: 0; } }
+
+/* Robot */
+.rgrid { position: relative; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; width: min(100%, 340px); aspect-ratio: 1; background: #DCEFD9; border-radius: 18px; padding: 6px; border: 2px solid var(--line); }
+.rc { background: #F4FBF1; border-radius: 10px; display: grid; place-items: center; font-size: clamp(24px, 8vw, 36px); }
+.robot { position: absolute; width: calc((100% - 12px - 16px) / 5); aspect-ratio: 1; left: calc(6px + var(--x) * ((100% - 12px - 16px) / 5 + 4px)); top: calc(6px + var(--y) * ((100% - 12px - 16px) / 5 + 4px)); display: grid; place-items: center; font-size: clamp(26px, 8.5vw, 38px); transition: left .3s, top .3s; }
+.robot.happy { animation: yay .6s 2; }
+.prog { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; min-height: 46px; width: 100%; background: var(--card); border: 2px dashed var(--line); border-radius: 14px; padding: 6px; font-size: 24px; }
+.prog .ph { font-size: 14px; color: var(--muted); align-self: center; }
+.prog span.now { background: var(--hl); border-radius: 8px; }
+.arrows { display: grid; grid-template-columns: repeat(3, 76px); gap: 8px; }
+.arrows .key { font-size: 26px; }
+
+/* Sudoku */
+.sudoku { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; width: min(100%, 320px); aspect-ratio: 1; background: var(--ink); padding: 4px; border-radius: 16px; }
+.sudoku .sc { background: var(--card); border-radius: 8px; font-size: clamp(30px, 10vw, 44px); }
+.sudoku .sc:nth-child(4n+2) { margin-right: 3px; }
+.sudoku .sc:nth-child(n+5):nth-child(-n+8) { margin-bottom: 3px; }
+.sudoku .given { background: #EFE6D4; }
+.sudoku .sc.sel { box-shadow: inset 0 0 0 4px var(--brand); }
+.sudoku .sc.ok { animation: pop .35s; }
+.sudoku .sc.bad { background: var(--red-bg); }
+
 /* Animations (comme LinguaPop ; désactivées en mode calme) */
 .screen { animation: enter .28s ease-out; }
 .owl { animation: bob 2.6s ease-in-out infinite; position: relative; }
