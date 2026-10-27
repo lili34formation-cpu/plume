@@ -46,7 +46,7 @@ function adult(tab) {
   const p = P();
   tab = tab || (DB.role !== 'parent' && DB.profiles.length > 1 ? 'groupe' : 'bilan');
   const tabs = [['bilan', '📊 Bilan'], ['programme', '🎯 Programme'], ['notes', '📝 Notes'], ['reglages', '🔤 Lecture'],
-    ['groupe', DB.role === 'parent' ? '👨‍👩‍👧 Enfants' : '👥 Groupe'], ['conseils', '💡 Conseils']];
+    ['groupe', DB.role === 'parent' ? '👨‍👩‍👧 Enfants' : '👥 Groupe'], ['compte', '☁️ Compte'], ['conseils', '💡 Conseils']];
   const [re, rl] = ROLES[DB.role];
   screen(`${topBar('Espace adultes')}
     <div class="who-bar no-print">
@@ -54,11 +54,11 @@ function adult(tab) {
       ${DB.profiles.length > 1 ? `<label>Enfant : <select data-kid>${DB.profiles.map(k => `<option value="${k.id}" ${k.id === p.id ? 'selected' : ''}>${k.avatar} ${esc(k.name)}</option>`).join('')}</select></label>` : `<span>${p.avatar} ${esc(p.name)}</span>`}
     </div>
     <div class="tabs scroll no-print">${tabs.map(([k, l]) => `<button class="${k === tab ? 'on' : ''}" data-t="${k}">${l}</button>`).join('')}</div>
-    <div class="panel">${({ bilan: bilanHTML, programme: programmeHTML, notes: notesHTML, reglages: reglagesHTML, groupe: groupeHTML, conseils: conseilsHTML })[tab](p)}</div>`, 'adult');
+    <div class="panel">${({ bilan: bilanHTML, programme: programmeHTML, notes: notesHTML, reglages: reglagesHTML, groupe: groupeHTML, compte: compteHTML, conseils: conseilsHTML })[tab](p)}</div>`, 'adult');
   $$('[data-t]').forEach(b => b.onclick = () => adult(b.dataset.t));
   $('[data-role]').onclick = () => { DB.role = null; save(); adult(tab); };
   const kid = $('[data-kid]'); if (kid) kid.onchange = () => { DB.current = kid.value; save(); applySettings(); adult(tab); };
-  ({ bilan: bindBilan, programme: bindProgramme, notes: bindNotes, reglages: bindReglages, groupe: bindGroupe, conseils: () => {} })[tab](p);
+  ({ bilan: bindBilan, programme: bindProgramme, notes: bindNotes, reglages: bindReglages, groupe: bindGroupe, compte: bindCompte, conseils: () => {} })[tab](p);
 }
 
 // ---------- Calculs pour le bilan ----------
@@ -207,8 +207,8 @@ function bindBilan(p) {
 }
 
 // ---------- Onglet Programme (adapter le travail) ----------
-function programmeHTML(p) {
-  const pr = PROG();
+function programmeHTML(p, opts = {}) {
+  const pr = PROG(p);
   return `
     <p class="note">Les changements s'appliquent dès la prochaine séance de <b>${esc(p.name)}</b>.</p>
     <h3>🎯 Sons à travailler en priorité</h3>
@@ -217,7 +217,7 @@ function programmeHTML(p) {
       const i = pr.focus.indexOf(s.id);
       return `<tr><td><span class="rd big-t">${esc(s.title)}</span> ${p.steps[s.id] ? stars(p.steps[s.id]) : ''}</td>
         <td><button class="mini ${i >= 0 ? 'on' : ''}" data-focus="${s.id}">${i >= 0 ? `⭐ Priorité ${i + 1}` : '☆ Prioritaire'}</button></td>
-        <td><button class="mini" data-acq="${s.id}" title="Marquer comme acquis">✓ Acquis</button> <button class="mini" data-redo="${s.id}" title="Remettre à zéro">↺ À revoir</button></td></tr>`;
+        <td>${opts.shared ? '' : `<button class="mini" data-acq="${s.id}" title="Marquer comme acquis">✓ Acquis</button> <button class="mini" data-redo="${s.id}" title="Remettre à zéro">↺ À revoir</button>`}</td></tr>`;
     }).join('')}`).join('')}</table>
 
     <h3>⏱️ Longueur des séances de sons</h3>
@@ -230,12 +230,12 @@ function programmeHTML(p) {
     <p class="note">Par exemple, ne garder que la lecture pendant une période ciblée.</p>
     <div class="toggles">${MODULES.map(([k, l]) => `<label class="tg"><input type="checkbox" data-mod="${k}" ${pr.hide.includes(k) ? '' : 'checked'}> ${l}</label>`).join('')}</div>
 
-    <h3>🎒 Classe (niveau des verbes, des problèmes et du calcul)</h3>
-    <div class="seg" data-lvl>${LEVELS.map(l => `<button class="${p.level === l ? 'on' : ''}" data-v="${l}">${l}</button>`).join('')}</div>`;
+    ${opts.shared ? '' : `<h3>🎒 Classe (niveau des verbes, des problèmes et du calcul)</h3>
+    <div class="seg" data-lvl>${LEVELS.map(l => `<button class="${p.level === l ? 'on' : ''}" data-v="${l}">${l}</button>`).join('')}</div>`}`;
 }
-function bindProgramme(p) {
+function bindProgramme(p, opts = {}) {
   const pr = () => { p.prog = p.prog || JSON.parse(JSON.stringify(PROG_DEFAULT)); p.prog.ex = p.prog.ex || { ...PROG_DEFAULT.ex }; p.prog.hide = p.prog.hide || []; p.prog.focus = p.prog.focus || []; return p.prog; };
-  const keep = () => { const y = window.scrollY; save(); adult('programme'); window.scrollTo(0, y); };
+  const keep = opts.onChange || (() => { const y = window.scrollY; if (p.prog) p.prog.t = Date.now(); save(); adult('programme'); window.scrollTo(0, y); });
   $$('[data-focus]').forEach(b => b.onclick = () => { const f = pr().focus, id = b.dataset.focus, i = f.indexOf(id); i >= 0 ? f.splice(i, 1) : f.push(id); keep(); });
   $$('[data-acq]').forEach(b => b.onclick = () => { p.steps[b.dataset.acq] = 3; keep(); });
   $$('[data-redo]').forEach(b => b.onclick = () => { delete p.steps[b.dataset.redo]; keep(); });
@@ -244,24 +244,26 @@ function bindProgramme(p) {
   $$('[data-ex]').forEach(c => c.onchange = () => {
     pr().ex[c.dataset.ex] = c.checked;
     if (!Object.values(pr().ex).some(Boolean)) { pr().ex[c.dataset.ex] = true; c.checked = true; toast('Gardez au moins un exercice.'); }
-    save();
+    keep();
   });
-  $$('[data-mod]').forEach(c => c.onchange = () => { const h = pr().hide, k = c.dataset.mod; c.checked ? h.splice(h.indexOf(k), 1) : h.includes(k) || h.push(k); save(); });
+  $$('[data-mod]').forEach(c => c.onchange = () => { const h = pr().hide, k = c.dataset.mod; c.checked ? h.splice(h.indexOf(k), 1) : h.includes(k) || h.push(k); keep(); });
 }
 
 // ---------- Onglet Notes ----------
-function notesHTML(p) {
+function notesHTML(p, opts = {}) {
   const notes = (p.notes || []).map((n, i) => ({ ...n, i })).reverse();
   return `
     <p class="note">Notez vos observations : ce qui marche, ce qui bloque, ce qui a été vu en séance ou en classe. Les dernières notes apparaissent dans le bilan.</p>
     <textarea class="note-in" data-txt rows="4" placeholder="Ex. : confond encore b et d en lecture de mots, mais plus en syllabes. Bonne concentration aujourd'hui."></textarea>
     <button class="btn small" data-add>Ajouter la note</button>
-    <ul class="notes-list">${notes.map(n => `<li><b>${fmtDay(n.d)}/${n.d.slice(0, 4)}</b> · ${esc(ROLES[n.role] ? ROLES[n.role][0] + ' ' + ROLES[n.role][1] : '')}<br>${esc(n.text)} <button class="mini danger" data-del="${n.i}">Supprimer</button></li>`).join('') || '<li class="note">Aucune note pour le moment.</li>'}</ul>`;
+    <ul class="notes-list">${notes.map(n => `<li><b>${fmtDay(n.d)}/${n.d.slice(0, 4)}</b> · ${esc(ROLES[n.role] ? ROLES[n.role][0] + ' ' + ROLES[n.role][1] : '')}${n.by ? ' · ' + esc(n.by) : ''}<br>${esc(n.text)} ${opts.shared ? '' : `<button class="mini danger" data-del="${n.i}">Supprimer</button>`}</li>`).join('') || '<li class="note">Aucune note pour le moment.</li>'}</ul>`;
 }
-function bindNotes(p) {
+function bindNotes(p, opts = {}) {
   $('[data-add]').onclick = () => {
     const t = $('[data-txt]').value.trim(); if (!t) return;
-    (p.notes = p.notes || []).push({ d: dayKey(), role: DB.role, text: t.slice(0, 1000) }); save(); adult('notes');
+    const note = { d: dayKey(), role: DB.role, text: t.slice(0, 1000), by: typeof acctUser !== 'undefined' && acctUser ? acctName(acctUser) : undefined };
+    if (opts.onAdd) return opts.onAdd(note);
+    (p.notes = p.notes || []).push(note); save(); adult('notes');
   };
   $$('[data-del]').forEach(b => b.onclick = () => { if (confirm('Supprimer cette note ?')) { p.notes.splice(+b.dataset.del, 1); save(); adult('notes'); } });
 }
@@ -276,6 +278,7 @@ function kidRow(k) {
 function groupeHTML() {
   const rows = DB.profiles.map(kidRow);
   return `
+    ${DB.role !== 'parent' ? `<div class="hint-card">📥 Un parent vous a donné un <b>code de partage</b> ? Ouvrez l'onglet <b>☁️ Compte</b> pour suivre son enfant depuis votre appareil.</div>` : ''}
     <p class="note">${DB.profiles.length} enfant(s) sur cet appareil. Touchez une ligne pour ouvrir son bilan.</p>
     <div class="tbl-wrap"><table class="tbl grp">
       <tr><th>Enfant</th><th>Classe</th><th>Dernière activité</th><th>Min (7 j)</th><th>Sons ✓</th><th>Lecture (mots/min)</th><th>À travailler</th></tr>

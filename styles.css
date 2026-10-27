@@ -482,6 +482,20 @@ body.calm .bub { bottom: auto; top: var(--y); }
 }
 @media (max-width: 420px) { .bilan .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
+.acct-intro ul { padding-left: 20px; line-height: 1.6; }
+.acct-form { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+.acct-form .field { max-width: none; }
+.acct-msg { color: var(--red); font-size: 15px; min-height: 1.2em; margin: 4px 0; }
+.acct-box { background: var(--card); border: 2px solid var(--line); border-radius: 16px; padding: 12px 14px; }
+.acct-box p { margin: 4px 0; }
+.code-row { display: flex; gap: 8px; align-items: center; }
+.gate.code { max-width: 200px; text-transform: uppercase; letter-spacing: .15em; font-size: 20px; }
+.share-card { background: var(--card); border: 2px solid var(--line); border-radius: 16px; padding: 10px 14px; margin-bottom: 10px; }
+.share-card p { margin: 6px 0; }
+.code-show .rd { font-size: 26px; font-weight: 700; letter-spacing: .2em; background: var(--hl); color: #3A2E00; padding: 2px 10px; border-radius: 10px; }
+.danger-t { color: var(--red) !important; }
+.hint-card { background: color-mix(in srgb, var(--brand) 10%, var(--card)); border: 2px solid var(--brand); border-radius: 14px; padding: 10px 14px; font-size: 15px; line-height: 1.5; }
+
 /* Impression du bilan (ou « Enregistrer en PDF ») */
 @media print {
   :root { --bg: #fff; --card: #fff; --ink: #111; --muted: #555; --line: #ccc; }

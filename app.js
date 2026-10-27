@@ -334,7 +334,7 @@ function wordItems(w, types) {
 }
 
 const PROG_DEFAULT = { focus: [], hide: [], ex: { ear: true, syl: true, word: true, build: true, flash: true, sentence: true }, length: 'normal' };
-const PROG = () => { const p = P(); const g = (p && p.prog) || {}; return { ...PROG_DEFAULT, ...g, ex: { ...PROG_DEFAULT.ex, ...(g.ex || {}) } }; };
+const PROG = (p = P()) => { const g = (p && p.prog) || {}; return { ...PROG_DEFAULT, ...g, ex: { ...PROG_DEFAULT.ex, ...(g.ex || {}) } }; };
 const EX_COUNT = { court: { ear: 2, syl: 2, word: 3, build: 1, flash: 2, sentence: 1 }, normal: { ear: 4, syl: 3, word: 4, build: 2, flash: 3, sentence: 2 }, long: { ear: 6, syl: 4, word: 6, build: 3, flash: 4, sentence: 2 } };
 function stepItems(st) {
   const pr = PROG(), cnt = EX_COUNT[pr.length] || EX_COUNT.normal;
@@ -1141,6 +1141,7 @@ function bindProfils() {
     const p = DB.profiles.find(x => x.id === b.dataset.del);
     if (!confirm(`Supprimer ${p.name} et toute sa progression ?`)) return;
     DB.profiles = DB.profiles.filter(x => x !== p);
+    DB.deleted = [...(DB.deleted || []), p.id];
     if (DB.current === p.id) DB.current = DB.profiles[0] ? DB.profiles[0].id : null;
     save(); DB.profiles.length ? adult('groupe') : profiles();
   });

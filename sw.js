@@ -1,6 +1,6 @@
 // Plume — mise en cache pour fonctionner hors connexion.
-const CACHE = 'plume-v6';
-const CORE = ['./', 'index.html', 'styles.css', 'content.js', 'conj.js', 'math.js', 'games.js', 'adult.js', 'app.js', 'manifest.json', 'icon.svg'];
+const CACHE = 'plume-v7';
+const CORE = ['./', 'index.html', 'styles.css', 'content.js', 'conj.js', 'math.js', 'games.js', 'adult.js', 'app.js', 'account.js', 'manifest.json', 'icon.svg'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE)).then(() => self.skipWaiting()));
@@ -10,7 +10,7 @@ self.addEventListener('activate', e => {
 });
 // Réseau d'abord (pour recevoir les mises à jour), cache si hors connexion.
 self.addEventListener('fetch', e => {
-  if (e.request.method !== 'GET') return;
+  if (e.request.method !== 'GET' || e.request.url.includes('.supabase.co')) return;
   // Voix : cache d'abord (elles ne changent jamais pour un même nom de fichier).
   if (e.request.url.includes('/audio/') && e.request.url.endsWith('.mp3')) {
     e.respondWith(caches.match(e.request).then(r => r || fetch(e.request).then(res => {
